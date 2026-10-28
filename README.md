@@ -1,6 +1,21 @@
-# Mite
+<p align="center">
+  <img src="assets/AppIcon.png" width="160" alt="Mite">
+</p>
+
+<h1 align="center">Mite</h1>
+
+<p align="center">
+  <a href="https://github.com/iHongRen/Mite/releases/latest"><img src="https://img.shields.io/github/v/release/iHongRen/Mite?style=flat-square&color=0f57d1" alt="Release"></a>
+  <a href="https://github.com/iHongRen/Mite/releases"><img src="https://img.shields.io/github/downloads/iHongRen/Mite/total?style=flat-square&color=0f57d1" alt="Downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/iHongRen/Mite?style=flat-square&color=0f57d1" alt="License"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-lightgrey?style=flat-square" alt="macOS">
+</p>
 
 macOS 上的本地批量 PNG 压缩工具。在 Finder 里选中图片或文件夹，点一下工具栏图标就能压缩。压缩由内嵌的 [pngdeer](https://github.com/heydeer/pngdeer) 在本机完成——图片不会上传。
+
+## 截图
+
+![Mite 截图](screenshots/screenshot.gif)
 
 ## 特点
 
@@ -34,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/iHongRen/Mite/main/install.sh | sh
 
 > 点击 Finder 工具栏图标时，系统不会把选中的文件作为参数传给应用，所以应用需要向 Finder 查询当前选中项——这就是必须授予“控制访达”权限的原因。
 
-## 配置
+## 配置 (可选)
 
 配置文件在 `~/.config/mite/config`，安装脚本会自动生成一份带注释的默认配置（已存在则不覆盖），直接编辑即可。手动安装时没有这份文件，可以从仓库复制示例：
 
