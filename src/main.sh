@@ -10,8 +10,8 @@ LOG="$LOG_DIR/Mite.log"
 
 FORMAT="png"
 TARGET="auto"
-NOTIFY="notification"
-OUTPUT_NAME="compressed"
+NOTIFY="none"
+OUTPUT_NAME="tinified"
 OPEN_OUTPUT="1"
 
 [ -f "$CONFIG" ] && . "$CONFIG"
@@ -24,12 +24,12 @@ OUTPUT_NAME="${MITE_OUTPUT_DIR:-$OUTPUT_NAME}"
 OPEN_OUTPUT="${MITE_OPEN_OUTPUT:-$OPEN_OUTPUT}"
 
 case "$FORMAT" in png|webp) ;; *) FORMAT="png" ;; esac
-case "$NOTIFY" in dialog|notification|none) ;; *) NOTIFY="notification" ;; esac
+case "$NOTIFY" in dialog|notification|none) ;; *) NOTIFY="none" ;; esac
 if [ "$TARGET" != "auto" ] && ! printf '%s' "$TARGET" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
   TARGET="auto"
 fi
 case "$OPEN_OUTPUT" in 0|1) ;; *) OPEN_OUTPUT="1" ;; esac
-[ -n "$OUTPUT_NAME" ] || OUTPUT_NAME="compressed"
+[ -n "$OUTPUT_NAME" ] || OUTPUT_NAME="tinified"
 
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 log() { printf '%s\t%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG" 2>/dev/null || true; }
@@ -63,7 +63,7 @@ usage() {
   echo "配置: $CONFIG"
   echo "环境变量: MITE_FORMAT=png|webp  MITE_TARGET=auto|0-100"
   echo "          MITE_NOTIFY=dialog|notification|none"
-  echo "          MITE_OUTPUT_DIR=compressed  MITE_OPEN_OUTPUT=0|1"
+  echo "          MITE_OUTPUT_DIR=tinified  MITE_OPEN_OUTPUT=0|1"
 }
 
 case "${1:-}" in
@@ -116,7 +116,7 @@ if [ "$total" -eq 0 ]; then
   exit 0
 fi
 
-# 每个源目录对应一个本次新建的输出目录：compressed、compressed(1)……
+# 每个源目录对应一个本次新建的输出目录：tinified、tinified(1)……
 for f in "${files[@]}"; do
   dirname "$f"
 done | sort -u > "$tmp_dirs"

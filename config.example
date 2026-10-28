@@ -12,10 +12,10 @@ FORMAT=png
 TARGET=auto
 
 # 提示方式：dialog 弹窗 / notification 系统通知 / none 静默
-NOTIFY=notification
+NOTIFY=none
 
 # 输出目录名，位于每个源文件所在目录下
-OUTPUT_NAME=compressed
+OUTPUT_NAME=tinified
 
 # 完成后是否打开输出目录：1 是 / 0 否
 OPEN_OUTPUT=1

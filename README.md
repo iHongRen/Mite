@@ -49,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/iHongRen/Mite/main/install.sh | sh
 
 1. 按住 `⌘` 用鼠标把 `/Applications/Mite.app` 拖到 Finder 工具栏
 2. 在 Finder 中选中 PNG 文件或文件夹，点击工具栏上的 Mite 图标
-3. 压缩结果保存在每个源目录下的 `compressed/` 文件夹（已存在则依次为 `compressed(1)`、`compressed(2)`……）
+3. 压缩结果保存在每个源目录下的 `tinified/` 文件夹（已存在则依次为 `tinified(1)`、`tinified(2)`……）
 
 首次点击会请求“控制访达”权限（用于读取当前选中的文件），请选择允许。如果误点了拒绝，到 **系统设置 → 隐私与安全性 → 自动化 → Mite**，勾选“访达”即可。
 
@@ -60,7 +60,7 @@ curl -fsSL https://raw.githubusercontent.com/iHongRen/Mite/main/install.sh | sh
 
 ## 配置
 
-复制配置示例并编辑：
+`install.sh` 会在 `~/.config/mite/config` 生成一份带注释的默认配置（已存在则不覆盖），按需编辑即可。从源码手动安装时，可以自行复制示例：
 
 ```bash
 mkdir -p ~/.config/mite
@@ -71,8 +71,8 @@ cp config.example ~/.config/mite/config
 |---|---|---|
 | `FORMAT` | 输出格式：`png` 或 `webp` | `png` |
 | `TARGET` | 质量目标：`auto` 或 0–100 的 SSIMULACRA2 分数 | `auto` |
-| `NOTIFY` | 提示方式：`dialog` 弹窗 / `notification` 通知 / `none` 静默 | `notification` |
-| `OUTPUT_NAME` | 输出目录名 | `compressed` |
+| `NOTIFY` | 提示方式：`dialog` 弹窗 / `notification` 通知 / `none` 静默 | `none` |
+| `OUTPUT_NAME` | 输出目录名 | `tinified` |
 | `OPEN_OUTPUT` | 完成后是否打开输出目录 | `1` |
 
 也可以用同名环境变量覆盖：`MITE_FORMAT`、`MITE_TARGET`、`MITE_NOTIFY`、`MITE_OUTPUT_DIR`、`MITE_OPEN_OUTPUT`。

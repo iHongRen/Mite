@@ -8,6 +8,13 @@ APP="Mite"
 INSTALL_DIR="/Applications"
 ZIP_URL="https://github.com/${REPO}/releases/latest/download/${APP}.zip"
 
+# 用 sudo 安装时，配置要写到真实用户的家目录
+if [ -n "${SUDO_USER:-}" ]; then
+  USER_HOME=$(eval echo "~$SUDO_USER")
+else
+  USER_HOME="$HOME"
+fi
+
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "Mite 仅支持 macOS。" >&2
   exit 1
@@ -49,6 +56,39 @@ cp -R "$TMP/out/$APP.app" "$INSTALL_DIR/$APP.app"
 
 # 去掉下载隔离标记，避免首次启动被 Gatekeeper 拦截
 xattr -dr com.apple.quarantine "$INSTALL_DIR/$APP.app"
+
+# 生成默认配置，已有配置不覆盖
+CONFIG_DIR="$USER_HOME/.config/mite"
+CONFIG_FILE="$CONFIG_DIR/config"
+if [ -f "$CONFIG_FILE" ]; then
+  echo "保留已有配置：$CONFIG_FILE"
+else
+  mkdir -p "$CONFIG_DIR"
+  cat > "$CONFIG_FILE" <<'CONFIG'
+# Mite 配置
+# 环境变量 MITE_FORMAT / MITE_TARGET / MITE_NOTIFY /
+# MITE_OUTPUT_DIR / MITE_OPEN_OUTPUT 优先于本文件。
+
+# 输出格式：png 或 webp
+FORMAT=png
+
+# 压缩质量：auto 自动选择，或 0-100 的 SSIMULACRA2 目标
+TARGET=auto
+
+# 提示方式：dialog 弹窗 / notification 系统通知 / none 静默
+NOTIFY=none
+
+# 输出目录名，位于每个源文件所在目录下
+OUTPUT_NAME=tinified
+
+# 完成后是否打开输出目录：1 是 / 0 否
+OPEN_OUTPUT=1
+CONFIG
+  if [ -n "${SUDO_USER:-}" ]; then
+    chown "$SUDO_USER" "$CONFIG_FILE"
+  fi
+  echo "已生成默认配置：$CONFIG_FILE"
+fi
 
 echo
 echo "安装完成：$INSTALL_DIR/$APP.app"
