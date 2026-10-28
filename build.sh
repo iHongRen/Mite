@@ -1,12 +1,14 @@
 #!/bin/bash
 # 构建 dist/Mite.app：下载官方双架构二进制、合并、打包、内嵌、签名。
+# 用法：./build.sh [版本号]   版本号写入 App 的 Info.plist，默认 0.0.0
 set -euo pipefail
 cd "$(cd "$(dirname "$0")" && pwd)"
 
-VERSION="0.2.0"
-BASE_URL="https://github.com/heydeer/homebrew-tap/releases/download/pngdeer-v${VERSION}"
-ARM_URL="${BASE_URL}/pngdeer-${VERSION}-aarch64-apple-darwin.tar.gz"
-X86_URL="${BASE_URL}/pngdeer-${VERSION}-x86_64-apple-darwin.tar.gz"
+APP_VERSION="${1:-0.0.0}"
+PNGDEER_VERSION="0.2.0"
+BASE_URL="https://github.com/heydeer/homebrew-tap/releases/download/pngdeer-v${PNGDEER_VERSION}"
+ARM_URL="${BASE_URL}/pngdeer-${PNGDEER_VERSION}-aarch64-apple-darwin.tar.gz"
+X86_URL="${BASE_URL}/pngdeer-${PNGDEER_VERSION}-x86_64-apple-darwin.tar.gz"
 ARM_SHA="5e1745e08232d60a6050c611ed57521b8d0352e7f3a43d60d5ae2b4a79c073b8"
 X86_SHA="5324df85d4b891b59f3f830ea68c03b4fb5157bc4591d10436854daf39c7d4f7"
 
@@ -43,7 +45,18 @@ PLIST="dist/Mite.app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Delete :CFBundleIdentifier" "$PLIST" >/dev/null 2>&1 || true
 /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.cxy.Mite" "$PLIST"
 
+# 写入版本号，保证应用内版本与发布 tag 一致
+/usr/libexec/PlistBuddy -c "Delete :CFBundleShortVersionString" "$PLIST" >/dev/null 2>&1 || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $APP_VERSION" "$PLIST"
+/usr/libexec/PlistBuddy -c "Delete :CFBundleVersion" "$PLIST" >/dev/null 2>&1 || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $APP_VERSION" "$PLIST"
+
 RES="dist/Mite.app/Contents/Resources"
+cp assets/AppIcon.icns "$RES/AppIcon.icns"
+# osacompile 默认图标通过 CFBundleIconName 指向 Assets.car，这里改为使用自带图标
+/usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" "$PLIST" >/dev/null 2>&1 || true
+/usr/libexec/PlistBuddy -c "Delete :CFBundleIconFile" "$PLIST" >/dev/null 2>&1 || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$PLIST"
 cp vendor/pngdeer "$RES/pngdeer"
 cp src/main.sh "$RES/main.sh"
 cp vendor/LICENSE "$RES/LICENSE-pngdeer"

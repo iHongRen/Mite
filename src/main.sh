@@ -25,13 +25,17 @@ OPEN_OUTPUT="${MITE_OPEN_OUTPUT:-$OPEN_OUTPUT}"
 
 case "$FORMAT" in png|webp) ;; *) FORMAT="png" ;; esac
 case "$NOTIFY" in dialog|notification|none) ;; *) NOTIFY="none" ;; esac
-if [ "$TARGET" != "auto" ] && ! printf '%s' "$TARGET" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
+if [ "$TARGET" != "auto" ] && ! printf '%s' "$TARGET" | grep -Eq '^(100|[0-9]{1,2})(\.[0-9]+)?$'; then
   TARGET="auto"
 fi
 case "$OPEN_OUTPUT" in 0|1) ;; *) OPEN_OUTPUT="1" ;; esac
 [ -n "$OUTPUT_NAME" ] || OUTPUT_NAME="tinified"
 
 mkdir -p "$LOG_DIR" 2>/dev/null || true
+# 日志超过 1 MiB 时轮转一份，避免无限增长
+if [ -f "$LOG" ] && [ "$(stat -f%z "$LOG" 2>/dev/null || echo 0)" -gt 1048576 ]; then
+  mv -f "$LOG" "$LOG.1" 2>/dev/null || true
+fi
 log() { printf '%s\t%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG" 2>/dev/null || true; }
 
 as_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
@@ -84,18 +88,20 @@ tmp_map=$(mktemp) || exit 1
 tmp_dirs=$(mktemp) || exit 1
 trap 'rm -f "$tmp_files" "$tmp_map" "$tmp_dirs"' EXIT
 
-# 收集 PNG：目录递归查找，文件只接受 .png（pngdeer 只能解码 PNG）
+# 收集 PNG：目录递归查找（跟随直接传入的符号链接），跳过 .app 包与历次生成的输出目录
 for arg in "$@"; do
   [ -n "$arg" ] || continue
   case "$arg" in *.app) continue ;; esac
   if [ -d "$arg" ]; then
     while IFS= read -r -d '' f; do
-      printf '%s\n' "$f" >> "$tmp_files"
-    done < <(find "$arg" -type f -iname '*.png' -print0)
+      printf '%s\0' "$f" >> "$tmp_files"
+    done < <(find -H "$arg" -mindepth 1 \
+      \( -iname '*.app' -o -name "$OUTPUT_NAME" -o -name "$OUTPUT_NAME(*)" \) -prune -o \
+      -type f -iname '*.png' -print0)
   elif [ -f "$arg" ]; then
     lower=$(printf '%s' "$arg" | tr '[:upper:]' '[:lower:]')
     case "$lower" in
-      *.png) printf '%s\n' "$arg" >> "$tmp_files" ;;
+      *.png) printf '%s\0' "$arg" >> "$tmp_files" ;;
       *) log "跳过（不是 PNG）: $arg" ;;
     esac
   else
@@ -103,9 +109,9 @@ for arg in "$@"; do
   fi
 done
 
-sort -u "$tmp_files" -o "$tmp_files"
+sort -zu "$tmp_files" -o "$tmp_files"
 files=()
-while IFS= read -r f; do
+while IFS= read -r -d '' f; do
   files+=("$f")
 done < "$tmp_files"
 total=${#files[@]}
@@ -116,25 +122,36 @@ if [ "$total" -eq 0 ]; then
   exit 0
 fi
 
-# 每个源目录对应一个本次新建的输出目录：tinified、tinified(1)……
-for f in "${files[@]}"; do
-  dirname "$f"
-done | sort -u > "$tmp_dirs"
+# 收集涉及的源目录（NUL 分隔，兼容含换行的文件名）
+while IFS= read -r -d '' f; do
+  printf '%s\0' "$(dirname "$f")"
+done < "$tmp_files" | sort -zu > "$tmp_dirs"
 
-while IFS= read -r d; do
-  out="$d/$OUTPUT_NAME"
-  n=1
-  while [ -d "$out" ]; do
-    out="$d/$OUTPUT_NAME($n)"
+# 每个源目录对应一个本次新建的输出目录：tinified、tinified(1)……
+# 用 mkdir 的原子性占位，避免并发运行选中同一个目录
+while IFS= read -r -d '' d; do
+  n=0
+  while :; do
+    if [ "$n" -eq 0 ]; then
+      out="$d/$OUTPUT_NAME"
+    else
+      out="$d/$OUTPUT_NAME($n)"
+    fi
+    if mkdir "$out" 2>/dev/null; then
+      printf '%s\0%s\0' "$d" "$out" >> "$tmp_map"
+      break
+    fi
     n=$((n + 1))
+    if [ "$n" -ge 1000 ]; then
+      log "无法创建输出目录: $d"
+      break
+    fi
   done
-  printf '%s\t%s\n' "$d" "$out" >> "$tmp_map"
-  mkdir -p "$out" 2>/dev/null || true
 done < "$tmp_dirs"
 
 get_outdir() {
   local needle="$1" d o
-  while IFS=$'\t' read -r d o; do
+  while IFS= read -r -d '' d && IFS= read -r -d '' o; do
     if [ "$d" = "$needle" ]; then
       printf '%s' "$o"
       return 0
@@ -146,16 +163,18 @@ ok=0
 kept=0
 failed=0
 saved=0
-last_outdir=""
 
 for f in "${files[@]}"; do
   d=$(dirname "$f")
   outdir=$(get_outdir "$d")
-  [ -n "$outdir" ] || continue
+  if [ -z "$outdir" ]; then
+    failed=$((failed + 1))
+    log "失败（无法创建输出目录）: $f"
+    continue
+  fi
   base=$(basename "$f")
   stem="${base%.*}"
   out="$outdir/$stem.$FORMAT"
-  last_outdir="$outdir"
 
   if [ "$TARGET" = "auto" ]; then
     "$BIN" "$f" -o "$out" --format "$FORMAT" >/dev/null 2>&1
@@ -191,12 +210,20 @@ for f in "${files[@]}"; do
   fi
 done
 
-# 清理本次创建但没有任何输出的空目录
-while IFS=$'\t' read -r d out; do
-  [ -d "$out" ] && rmdir "$out" 2>/dev/null
+# 清理本次创建但没有任何输出的空目录，同时统计非空输出目录
+outdir_count=0
+last_outdir=""
+while IFS= read -r -d '' d && IFS= read -r -d '' out; do
+  [ -d "$out" ] || continue
+  if rmdir "$out" 2>/dev/null; then
+    continue
+  fi
+  outdir_count=$((outdir_count + 1))
+  last_outdir="$out"
 done < "$tmp_map"
 
-if [ -n "$last_outdir" ] && [ -d "$last_outdir" ] && [ "$OPEN_OUTPUT" = "1" ]; then
+# 多个输出目录时逐个打开会弹出一堆窗口，仅在唯一目录时打开
+if [ "$OPEN_OUTPUT" = "1" ] && [ "$outdir_count" -eq 1 ]; then
   open "$last_outdir" >/dev/null 2>&1 || true
 fi
 
@@ -206,4 +233,10 @@ summary="共 ${total} 张：成功 ${ok} 张，保持原图 ${kept} 张"
 
 log "完成: $summary"
 notify "Mite 压缩完成" "$summary"
+
+# 有失败时返回非零，让调用方（应用外壳、脚本）能感知
+if [ "$failed" -gt 0 ]; then
+  echo "$summary" >&2
+  exit 1
+fi
 exit 0

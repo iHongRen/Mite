@@ -15,10 +15,10 @@ macOS 上的本地批量 PNG 压缩工具，用法类似 [TinyImage](https://git
 需要 macOS 自带的 `curl`、`lipo`、`osacompile`、`codesign`：
 
 ```bash
-./build.sh
+./build.sh [版本号]    # 版本号写入 App 的 Info.plist，省略则为 0.0.0
 ```
 
-产物是 `dist/Mite.app`，已内嵌双架构 pngdeer（约 4 MB），同时生成可发布的 `dist/Mite.zip`。
+产物是 `dist/Mite.app`，已内嵌双架构 pngdeer（约 4.5 MB），同时生成可发布的 `dist/Mite.zip`。
 
 ## 发布
 
@@ -77,6 +77,8 @@ cp config.example ~/.config/mite/config
 
 也可以用同名环境变量覆盖：`MITE_FORMAT`、`MITE_TARGET`、`MITE_NOTIFY`、`MITE_OUTPUT_DIR`、`MITE_OPEN_OUTPUT`。
 
+一次处理多个目录时会生成多个 `tinified/`，此时不会自动打开输出目录，避免弹出多个窗口。
+
 配置在每次运行时读取，修改后无需重新构建应用。
 
 ## 命令行使用
@@ -107,6 +109,7 @@ MITE_TARGET=85 Mite.app/Contents/Resources/main.sh image.png
 ## 限制
 
 - **输入只支持 PNG**。pngdeer 只能解码 PNG；WebP 是输出格式，不是输入格式。拖入的 JPG/WebP 等会被跳过。
+- 扫描目录时会跳过 `.app` 应用包和已生成的 `tinified`/`tinified(n)` 目录，不会压缩应用内的图标，也不会把上次的压缩结果再压一遍。
 - WebP 的自动质量目标是面向 TinyPNG WebP 的约 70 分，明显低于 PNG 路径的 85–90，因此体积小很多，但可能出现可见的画质损失。需要高质量时保持 `FORMAT=png`。
 - 压缩耗时与图片尺寸相关，所有核都会参与；大图可能需要几秒到几十秒。
 
@@ -118,6 +121,7 @@ Mite/
 ├── build.sh              # 构建应用与发布包
 ├── release.sh            # 打 tag 并发布 GitHub Release
 ├── config.example        # 配置示例
+├── assets/AppIcon.icns   # 应用图标
 ├── src/
 │   ├── main.sh           # 批量压缩逻辑
 │   └── app.applescript   # Finder 入口外壳

@@ -51,8 +51,12 @@ fi
 pkill -x "$APP" 2>/dev/null || true
 
 echo "安装到 $INSTALL_DIR"
+# 先复制到临时名再替换，避免中途失败留下残缺的 App
+NEW="$INSTALL_DIR/.${APP}.app.new"
+rm -rf "$NEW"
+cp -R "$TMP/out/$APP.app" "$NEW"
 rm -rf "$INSTALL_DIR/$APP.app"
-cp -R "$TMP/out/$APP.app" "$INSTALL_DIR/$APP.app"
+mv "$NEW" "$INSTALL_DIR/$APP.app"
 
 # 去掉下载隔离标记，避免首次启动被 Gatekeeper 拦截
 xattr -dr com.apple.quarantine "$INSTALL_DIR/$APP.app"

@@ -50,7 +50,7 @@ if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; the
   exit 1
 fi
 
-./build.sh
+./build.sh "$VERSION"
 if [ ! -f dist/Mite.zip ]; then
   echo "未生成 dist/Mite.zip。" >&2
   exit 1
@@ -61,11 +61,16 @@ git tag -a "$TAG" -m "Mite $VERSION"
 git push origin "$TAG"
 
 echo "创建 Release 并上传 dist/Mite.zip"
-gh release create "$TAG" dist/Mite.zip \
+if ! gh release create "$TAG" dist/Mite.zip \
   --repo "$REPO" \
   --title "Mite $VERSION" \
   --generate-notes \
-  --verify-tag
+  --verify-tag; then
+  echo "创建 Release 失败，回滚已推送的 tag。" >&2
+  git push --delete origin "$TAG" >/dev/null 2>&1 || true
+  git tag -d "$TAG" >/dev/null 2>&1 || true
+  exit 1
+fi
 
 echo
 echo "发布完成: https://github.com/$REPO/releases/tag/$TAG"
