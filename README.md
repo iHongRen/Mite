@@ -75,4 +75,7 @@ cp config.example ~/.config/mite/config
 
 先看 `~/Library/Logs/Mite.log` 最后的记录，通常会写明原因（例如没有找到 PNG、输出目录无法创建）。
 
+## 其他选择
+
+如果你想压缩 JPG、WebP、AVIF 等 PNG 以外的格式，可以试试 [TinyImage](https://github.com/iHongRen/TinyImage)：它调用 Tinify 云端 API，格式支持更广，但需要申请 API Key，免费额度为每月 500 张，图片也会上传到云端。只想处理 PNG、且希望完全本地离线的话，用 Mite 就够了。
 
