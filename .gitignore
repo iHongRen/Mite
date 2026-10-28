@@ -1,0 +1,7 @@
+# 构建中间产物（下载缓存、合并后的二进制、打包结果）
+.build/
+vendor/
+dist/
+
+# macOS 文件夹元数据
+.DS_Store
